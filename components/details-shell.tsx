@@ -164,11 +164,37 @@ function Chip({ children, color = DESIGN.colors.textSecondary }: { children: Rea
   );
 }
 
-
-export function PrimaryButton({ label, onPress }: { label: string; onPress?: () => void }) {
+// ✅ PrimaryButton — الآن يدعم disabled و tone
+export function PrimaryButton({
+  label,
+  onPress,
+  disabled = false,
+  tone = "primary",
+}: {
+  label: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  tone?: "primary" | "ghost";
+}) {
+  const isGhost = tone === "ghost";
   return (
-    <Pressable onPress={onPress} style={{ backgroundColor: "#fff", borderRadius: 10, paddingVertical: 12, alignItems: "center", marginBottom: 10 }}>
-      <Text style={{ color: "#000", fontWeight: "900" }}>{label}</Text>
+    <Pressable
+      onPress={disabled ? undefined : onPress}
+      disabled={disabled}
+      style={{
+        backgroundColor: isGhost ? "transparent" : "#fff",
+        borderWidth: isGhost ? 1 : 0,
+        borderColor: isGhost ? "#fff" : "transparent",
+        borderRadius: 10,
+        paddingVertical: 12,
+        alignItems: "center",
+        marginBottom: 10,
+        opacity: disabled ? 0.45 : 1,
+      }}
+    >
+      <Text style={{ color: isGhost ? "#fff" : "#000", fontWeight: "900" }}>
+        {label}
+      </Text>
     </Pressable>
   );
-}
+  }
