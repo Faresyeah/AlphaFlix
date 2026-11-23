@@ -1,6 +1,7 @@
 import "@/global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Alert, Linking, Platform } from "react-native";
@@ -17,9 +18,34 @@ import { LocaleProvider } from "@/lib/locale-context";
 import { readStored, STORAGE_KEYS, writeStored } from "@/lib/storage";
 import { ThemeProvider } from "@/lib/theme-provider";
 
+// ✅ 2-أ: إخفاء splash screen الأصلية (نمنعها من الاختفاء التلقائي)
+SplashScreen.preventAutoHideAsync().catch(() => undefined);
+
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };
 export const unstable_settings = { anchor: "(tabs)" };
+
+// ✅ 2-ب: HideNativeSplash — يخفي splash screen بعد ما Library ready
+function HideNativeSplash() {
+  const { ready } = useLibrary();
+  useEffect(() => {
+    if (!ready) return;
+    const t = setTimeout(() => {
+      void SplashScreen.hideAsync().catch(() => undefined);
+    }, 50);
+    return () => clearTimeout(t);
+  }, [ready]);
+
+  // fallback: إخفاء بعد 4 ثواني على الأكثر
+  useEffect(() => {
+    const t = setTimeout(() => {
+      void SplashScreen.hideAsync().catch(() => undefined);
+    }, 4000);
+    return () => clearTimeout(t);
+  }, []);
+
+  return null;
+}
 
 function ChannelNotice() {
   const [insets, setInsets] = useState(false);
@@ -49,7 +75,23 @@ function AppContent() {
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => { setInsets(metrics.insets); setFrame(metrics.frame); }, []);
   useEffect(() => { if (Platform.OS !== "web") return; const unsubscribe = subscribeSafeAreaInsets(handleSafeAreaUpdate); return () => unsubscribe(); }, [handleSafeAreaUpdate]);
   const providerInitialMetrics = useMemo(() => ({ ...(initialWindowMetrics ?? { insets: initialInsets, frame: initialFrame }), insets: { ...initialInsets, top: Math.max(initialInsets.top, 16), bottom: Math.max(initialInsets.bottom, 12) } }), [initialInsets, initialFrame]);
-  const content = <GestureHandlerRootView style={{ flex: 1 }}><trpc.Provider client={trpcClient} queryClient={queryClient}><QueryClientProvider client={queryClient}><ChannelNotice /><Stack screenOptions={{ headerShown: false }} initialRouteName="splash"><Stack.Screen name="splash" /><Stack.Screen name="(tabs)" /><Stack.Screen name="oauth/callback" /></Stack><StatusBar style="light" /></QueryClientProvider></trpc.Provider></GestureHandlerRootView>;
+  const content = (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          {/* ✅ 2-ج: HideNativeSplash قبل ChannelNotice */}
+          <HideNativeSplash />
+          <ChannelNotice />
+          <Stack screenOptions={{ headerShown: false }} initialRouteName="splash">
+            <Stack.Screen name="splash" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="oauth/callback" />
+          </Stack>
+          <StatusBar style="light" />
+        </QueryClientProvider>
+      </trpc.Provider>
+    </GestureHandlerRootView>
+  );
   if (Platform.OS === "web") return <ThemeProvider><SafeAreaProvider initialMetrics={providerInitialMetrics}><SafeAreaFrameContext.Provider value={frame}><SafeAreaInsetsContext.Provider value={insets}>{content}</SafeAreaInsetsContext.Provider></SafeAreaFrameContext.Provider></SafeAreaProvider></ThemeProvider>;
   return <ThemeProvider><SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider></ThemeProvider>;
 }
