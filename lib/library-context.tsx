@@ -80,7 +80,8 @@ export function LibraryProvider({ children }: { children: ReactNode }) {
       setProgressItems(migrateItems(pi));
       setResume(migrateLegacyAnimeKeys(r));
       setDownloads(d);
-      setReady(true);
+    }).catch(() => undefined).finally(() => {
+      if (active) setReady(true);
     });
     return () => {
       active = false;
@@ -175,4 +176,4 @@ export function useLibrary() {
   const value = useContext(LibraryContext);
   if (!value) throw new Error("useLibrary must be used inside LibraryProvider");
   return value;
-}
+                   }
