@@ -32,13 +32,7 @@ jobs:
         run: pnpm check
         continue-on-error: true
 
-      - name: Setup Expo / EAS
-        uses: expo/expo-github-action@v8
-        with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-
-      - name: Build APK (preview)
-        run: pnpm eas build -p android --profile preview --non-interactive
+      - name: Build APK with EAS
+        run: npx eas-cli@latest build -p android --profile preview --non-interactive
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
